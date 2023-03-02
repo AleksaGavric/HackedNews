@@ -20,13 +20,25 @@ app = FastAPI(
 
 @app.get("/")
 def read_root():
-    text = get_url_text("https://blog.jakoblind.no/aws-lambda-github-actions/")
-    summary = summarize(text)
+    hn_stories = get_hackernews_top_stories(1)
+    content = []
 
-    return summary
+    for story in hn_stories:
+        text = get_url_text(story["url"])
+        content.append(
+            {
+                "title": story["title"],
+                "url": story["url"],
+                "summary": summarize(text[:4080]),
+            }
+        )
+
+    content_json = json.dumps(content)
+
+    return content_json
 
 
-def get_hackernews_top_stories():
+def get_hackernews_top_stories(n):
     response = requests.get("https://hacker-news.firebaseio.com/v0/topstories.json")
 
     if response.status_code != 200:
@@ -34,7 +46,7 @@ def get_hackernews_top_stories():
             "[ERROR] Cannot establish connection to HackerNews, please try again later."
         )
 
-    top_stories = response.json()[:10]
+    top_stories = response.json()[:n]
 
     # get link for each story
     hn_top_stories = []
@@ -113,3 +125,6 @@ def summarize(text):
     summary_text = payload["choices"][0]["message"]["content"]
 
     return summary_text
+
+
+print(read_root())
